@@ -1,0 +1,58 @@
+#!/usr/bin/bash -e
+
+SCRIPT_DIR="$(dirname $(realpath $0))"
+
+function _echo {
+	echo "[#] ${@}"
+}
+
+function _error {
+	echo "[!] ${@}"
+}
+
+
+# Setup ansible-dependencies env file
+ANSIBLE_ENV_FILE="${HOME}/setup-ansible-dependencies.env"
+if ! [[ -f "$ANSIBLE_ENV_FILE" ]]; then
+_echo "Creating ${ANSIBLE_ENV_FILE}"
+cat << EOF > $ANSIBLE_ENV_FILE
+WG_VAULT_CLIENT_IP=10.10.0.12
+WG_VAULT_CLIENT_PRIVATE_KEY=$(read -p 'WG_VAULT_CLIENT_PRIVATE_KEY: ' && echo $REPLY)
+WG_VAULT_SERVER_HOST=$(read -p 'WG_VAULT_SERVER_HOST: ' && echo $REPLY)
+WG_VAULT_SERVER_PUBLIC_KEY=$(read -p 'WG_VAULT_SERVER_PUBLIC_KEY: ' && echo $REPLY)
+EOF
+fi
+
+#
+# Create user bin directory
+_echo "Creating ${HOME}/bin"
+ln -sf $(realpath "${SCRIPT_DIR}/bin") $HOME/bin
+
+
+# Clone git repositories
+CODE_DIR="${HOME}/code"
+if ! [[ -d "$CODE_DIR" ]]; then
+	_echo "Creating $CODE_DIR"
+	mkdir $CODE_DIR
+	_echo "Cloning repositories"
+	git -C $CODE_DIR clone git@github.com:mullvad/dns-adblock.git
+	git -C $CODE_DIR clone git@github.com:mullvad/infrastructure-ansible.git
+fi
+
+
+# Create symlinks
+_echo "Symlinking init.nvim"
+ln --symbolic --force $SCRIPT_DIR/init.vim $HOME/.config/nvim/init.vim
+
+
+# Install vim-plug
+_echo "Installing vim-plug"
+sh -c 'curl -sfLo "${XDG_DATA_HOME:-$HOME/.local/share}"/nvim/site/autoload/plug.vim --create-dirs \
+       https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+
+# Create bash aliases
+_echo "Creating bash aliases"
+grep -q 'alias g=' $HOME/.bashrc || echo 'alias g=git' >> $HOME/.bashrc
+grep -q 'alias vi=' $HOME/.bashrc || echo 'alias vi=nvim' >> $HOME/.bashrc
+grep -q 'alias vim=' $HOME/.bashrc || echo 'alias vim=nvim' >> $HOME/.bashrc
+grep -q 'alias inv=' $HOME/.bashrc || echo "alias inv='cd $CODE_DIR/infrastructure-ansible'" >> $HOME/.bashrc

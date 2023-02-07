@@ -1,0 +1,12 @@
+#!/bin/bash
+ 
+# Not the best check ever, but it seems to work on all git verifications at least
+if [[ $@ =~ (^|[[:space:]])"--verify"($|[[:space:]]) ]] ; then
+    export QUBES_GPG_DOMAIN="split-gpg-verify"
+else
+    export QUBES_GPG_DOMAIN="split-gpg-sign"
+fi
+ 
+. /etc/profile.d/qubes-gpg.sh
+#exec qubes-gpg-client --use-agent --no-tty "$@"
+exec qubes-gpg-client "$@"
